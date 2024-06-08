@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {validateUserLogin, getFruits, getFruit, getVegetables} = require('./mysqlConnection.js');
+const {validateUserLogin, getFruits, getFruit, getVegetables, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder} = require('./mysqlConnection.js');
 const fs = require('fs');
 var path = require('path');
 const app = express();
@@ -53,7 +53,59 @@ app.get("/fruit/:id", (req, res) => {
   getFruit(req.params["id"]).then((result) => {
     res.json(result);
   })
-})
+});
+
+app.get("/getsearchlist", (req, res) => {
+  const searchText = `%${req.query.search_text}%`;
+  searchProduct(searchText).then(result => {
+    res.json(result);
+  })
+});
+
+app.get("/getuseraddresses/:email_id", (req, res) => {
+  getAddresses(req.params["email_id"]).then(result => {
+    res.json(result);
+  })
+});
+
+app.get("/insertuser", (req, res) => {
+  insertUser(req.query.email_id, req.query.name, req.query.phone_number).then(result => {
+    res.json(result);
+  }).catch(() => {
+    console.log("Insertion failed");
+    res.json({
+      "errorMessage": "Insertion failed" 
+    });
+  })
+});
+
+app.get("/finduser", (req, res) => {
+  getUser(req.query.email_id).then(result => {
+    res.json(result);
+  }).catch(() => {
+    res.json({
+      "errorMessage": "Did not find any user" 
+    });
+  })
+});
+
+
+app.post("/submitaddress", (req, res) => {
+  submitAddress(req.body).then(result => {
+    res.send(result);
+  }).catch((err) => {
+    res.send(err);
+  })
+});
+
+app.post("/submitorder", (req, res) => {
+  console.log(req.body);
+  submitOrder(req.body).then(result => {
+    res.send(result);
+  }).catch((err) => {
+    res.send(err);
+  })
+});
 
 app.listen(PORT, function (err) {
   if (err) console.log(err);
