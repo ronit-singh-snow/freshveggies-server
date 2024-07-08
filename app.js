@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {validateUserLogin, getFruits, getFruit, getVegetables, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder} = require('./mysqlConnection.js');
+const {validateUserLogin, getFruits, getFruit, getVegetables, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList} = require('./mysqlConnection.js');
 const fs = require('fs');
 var path = require('path');
 const app = express();
@@ -107,7 +107,17 @@ app.post("/submitorder", (req, res) => {
   })
 });
 
-app.listen(PORT, function (err) {
+app.get("/listorders", (req, res) => {
+  ordersList(req.query.email_id).then(result => {
+    res.json(result);
+  }).catch(() => {
+    res.json({
+      "errorMessage": "Did not find any order associated to the email" 
+    });
+  })
+});
+
+app.listen(process.env.port || PORT, function (err) {
   if (err) console.log(err);
   console.log("Server listening on PORT", PORT);
 });

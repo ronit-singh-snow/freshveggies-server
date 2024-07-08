@@ -8,7 +8,8 @@ const SEARCH_PRODUCT_BY_NAME = `SELECT * FROM fruitvegetables.product where name
 const SEARCH_USER_BY_EMAIL = `SELECT * FROM fruitvegetables.user where email = ?`;
 const SELECT_ADDRESSES_FOR_USER = `SELECT * FROM fruitvegetables.address where email = ?`;
 const INSERT_USER = `INSERT INTO fruitvegetables.user (username, email, phone_number) VALUES (?, ?, ?)`;
-const SELECT_USER = `SELECT * FROM fruitvegetables.user where email = ?`
+const SELECT_USER = `SELECT * FROM fruitvegetables.user where email = ?`;
+const SELECT_ORDER = `SELECT * FROM fruitvegetables.order where email_id = ?`;
 const INSERT_ADDRESS = 'INSERT INTO fruitvegetables.address (house_flat_no, street_locality, pincode, type, name, phone_number, address_line_2, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?);'
 const INSERT_ORDER = 'INSERT INTO fruitvegetables.order (email_id, order_date, status, total_price) VALUES (?, ?, "placed", ?)';
 const INSERT_ORDER_ITEM = 'INSERT INTO fruitvegetables.order_item (order_id, product_id, quantity, unit_price) VALUES ?';
@@ -230,6 +231,22 @@ const submitOrder = async ({email, items, totalPrice, date}) => {
     });
 }
 
+const ordersList = async (email) => {
+    let connection = createConnection(mysqlConnectionConfig);
+    return new Promise((resolve, reject) => {
+        connection.query(SELECT_ORDER, [email], (err, result) => {
+            if (err) {
+                console.log("Getting error while searching for order with the email: " + email);
+                reject(err);
+            } else {
+                resolve(result);
+            }
+
+            connection.close();
+        });
+    });
+};
+
 module.exports.validateUserLogin = validateUserLogin;
 module.exports.getFruits = getFruits;
 module.exports.getFruit = getFruit;
@@ -240,3 +257,4 @@ module.exports.insertUser = insertUser;
 module.exports.getUser = getUser;
 module.exports.submitAddress = submitAddress;
 module.exports.submitOrder = submitOrder;
+module.exports.ordersList = ordersList;
