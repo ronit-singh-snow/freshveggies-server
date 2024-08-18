@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { validateUserLogin, getFruit, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList, getAddressById, filterProductWithQuery, getHomepageDetails } = require('./mysqlConnection.js');
+const { validateUserLogin, getFruit, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList, filterProductWithQuery, getHomepageDetails } = require('./mysqlConnection.js');
 const fs = require('fs');
 var path = require('path');
 const app = express();
@@ -36,20 +36,6 @@ app.post("/validate_login", async (req, res) => {
 		return res.send(false);
 });
 
-// app.get("/fruits", (req, res) => {
-// 	console.log("Getting fruits");
-// 	getFruits(req.query.limit).then((result) => {
-// 		res.json(result);
-// 	})
-// });
-
-// app.get("/vegetables", (req, res) => {
-// 	console.log(req.query.limit);
-// 	getVegetables(req.query.limit).then((result) => {
-// 		res.json(result);
-// 	})
-// });
-
 app.get("/fruit/:id", (req, res) => {
 	getFruit(req.params["id"]).then((result) => {
 		res.json(result);
@@ -78,21 +64,12 @@ app.post("/prodcts", (req, res) => {
 	})
 })
 
-app.get("/getuseraddresses/:phone_number/:id", (req, res) => {
-	if (req.params["id"]) {
-		getAddressById(req.params["id"]).then(result => {
-			res.json(result);
-		}).catch(() => {
-			console.log("failed getting the address");
-		})
-	}
-	else {
-		getAddresses(req.params["phone_number"]).then(result => {
-			res.json(result);
-		}).catch(() => {
-			console.log("failed getting the addressess");
-		})
-	}
+app.get("/getuseraddresses", (req, res) => {
+	getAddresses(req.query["phone_number"], req.query["id"]).then(result => {
+		res.json(result);
+	}).catch(() => {
+		console.log("failed getting the addressess");
+	})
 });
 
 app.get("/insertuser", (req, res) => {
@@ -118,7 +95,6 @@ app.get("/finduser", (req, res) => {
 
 
 app.post("/submitaddress", (req, res) => {
-	console.log(req.body)
 	submitAddress(req.body).then(result => {
 		res.send(result);
 	}).catch((err) => {
@@ -127,8 +103,7 @@ app.post("/submitaddress", (req, res) => {
 });
 
 app.post("/submitorder", (req, res) => {
-	console.log(req.body);
-	submitOrder(req.body).then(result => {
+	submitOrder(req.body.orderData, req.body.orderItems).then(result => {
 		res.send(result);
 	}).catch((err) => {
 		res.send(err);
@@ -140,7 +115,7 @@ app.get("/listorders", (req, res) => {
 		res.json(result);
 	}).catch(() => {
 		res.json({
-			"errorMessage": "Did not find any order associated to the email"
+			"errorMessage": "Did not find any order associated to the phone number"
 		});
 	})
 });

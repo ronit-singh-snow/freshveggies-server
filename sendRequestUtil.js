@@ -1,4 +1,4 @@
-const _dbRequestPromise = (connection, query, values) => {
+const _dbRequestPromise = (connection, query, values, closeConnection) => {
     return (resolve, reject) => {
         connection.query(query, values, (err, result) => {
             if (err) {
@@ -8,13 +8,14 @@ const _dbRequestPromise = (connection, query, values) => {
                 resolve(result);
             }
 
-            connection.close();
+            if (closeConnection)
+                connection.close();
         })
     }
 }
 
-const sendRequest = (connection, query, values) => {
-    return new Promise(_dbRequestPromise(connection, query, values));
+const sendRequest = (connection, query, values, closeConnection = true) => {
+    return new Promise(_dbRequestPromise(connection, query, values, closeConnection));
 }
 
 module.exports.sendRequest = sendRequest;

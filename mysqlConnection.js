@@ -1,30 +1,25 @@
-const {createConnection, createPool} = require('mysql2');
+const {createConnection} = require('mysql2');
 const { sendRequest } = require('./sendRequestUtil');
-const { query } = require('express');
+require('dotenv').config()
 
 const SELECT_USER_QUERY_BY_ID_PASSWORD = "SELECT * FROM fruitvegetables.user where username=? AND password=?";
-const SELECT_FRUITS_QUERY_WITHOUT_LIMIT = `SELECT * FROM fruitvegetables.product where category = 'fruit'`;
-const SELECT_VEGETABLES_QUERY_WITHOUT_LIMIT = `SELECT * FROM fruitvegetables.product where category = 'vegetable'`;
 const SELECT_FRUIT_BY_ID = `SELECT * FROM fruitvegetables.product where category = "fruit" AND id = ?`;
 const SEARCH_PRODUCT_BASE_QUERY = `SELECT * FROM fruitvegetables.product`;
 const SEARCH_PRODUCT_BY_NAME = `SELECT * FROM fruitvegetables.product where name LIKE ?`;
-const SEARCH_USER_BY_EMAIL = `SELECT * FROM fruitvegetables.user where email = ?`;
-const SELECT_ADDRESSES_FOR_USER = `SELECT * FROM fruitvegetables.address where phone_number = ?`;
-const SELECT_ADDRESSES_FOR_USER_BY_ID = `SELECT * FROM fruitvegetables.address where idaddress = ?`;
+const SELECT_ADDRESSES = `SELECT * FROM fruitvegetables.address`;
 const INSERT_USER = `INSERT INTO fruitvegetables.user (username, email, phone_number) VALUES (?, ?, ?)`;
 const SELECT_USER = `SELECT * FROM fruitvegetables.user where email = ? or phone_number = ?`;
 const SELECT_ORDER = `SELECT * FROM fruitvegetables.order where phone_number = ?`;
 const INSERT_ADDRESS = 'INSERT INTO fruitvegetables.address (house_flat_no, street_locality, pincode, type, name, phone_number, address_line_2, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?);'
-const INSERT_ORDER = 'INSERT INTO fruitvegetables.order (email_id, order_date, status, total_price) VALUES (?, ?, "placed", ?)';
+const INSERT_ORDER = 'INSERT INTO fruitvegetables.order (phone_number, order_date, status, total_price, order_create_at, timeslot, address) VALUES (?, ?, ?, ?, ?, ?, ?)';
 const INSERT_ORDER_ITEM = 'INSERT INTO fruitvegetables.order_item (order_id, product_id, quantity, unit_price) VALUES ?';
 
-
 const mysqlConnectionConfig = {
-    host: "freshveggies-mysqldb-freshveggies-backend.i.aivencloud.com",
-    user: "avnadmin",
-    password: "AVNS_6_cmqvEvy0ur5xFMSgT",
-    database: "fruitvegetables",
-    port: 20009
+    host: process.env.AIVEN_HOST,
+    user: process.env.AIVEN_USERNAME,
+    password: process.env.AIVEN_PASSWORD,
+    database: process.env.AIVEN_DATABASE,
+    port: process.env.AIVEN_PORT
 };
 
 
@@ -165,118 +160,72 @@ const searchProduct = async(searchText) => {
     })
 }
 
-const getAddresses = async(phoneNumber) => {
+const getAddresses = async(phoneNumber, id) => {
     let connection = createConnection(mysqlConnectionConfig);
-    return new Promise((resolve, reject) => {
-        connection.query(SELECT_ADDRESSES_FOR_USER, [phoneNumber], (err, addresses) => {
-            if (err) {
-                console.log("Getting error while searching for address with the phone number: " + phoneNumber);
-                reject(err);
-            } else if (addresses.length > 0) {
-                resolve(addresses);
-            } else {
-                reject("Did not find any address associated to the user");
-            }
+    let values = [];
+    let whereClause = "";
+    
+    if (id && id != -1) {
+        whereClause += " AND idaddress = ?";
+        values.push(id);
+    } else if (phoneNumber) {
+        whereClause += " AND phone_number = ?";
+        values.push(phoneNumber);
+    }
 
-            connection.close();
-        });
-    })
-}
-
-const getAddressById = async (id) => {
-    let connection = createConnection(mysqlConnectionConfig);
-    return new Promise((resolve, reject) => {
-        connection.query(SELECT_ADDRESSES_FOR_USER_BY_ID, [id], (err, addresses) => {
-            if (err) {
-                console.log("Getting error while searching for address with the id: " + id);
-                reject(err);
-            } else if (addresses.length > 0) {
-                console.log("Added found");
-                resolve(addresses);
-            } else {
-                console.log("Did not find any address associated to the user");
-                reject("Did not find any address associated to the user");
-            }
-
-            connection.close();
-        });
-    })
+    const query = SELECT_ADDRESSES + " WHERE " + whereClause.substring(5);
+    return sendRequest(connection, query, values);
 }
 
 const insertUser = async (email, name, phoneNumber) => {
     let connection = createConnection(mysqlConnectionConfig);
-    return new Promise((resolve, reject) => {
-        connection.query(INSERT_USER, [name, email, phoneNumber], (err, result) => {
-            if (err) {
-                console.log("Getting error while searching for user with the email: " + email);
-                reject(err);
-            } else {
-                console.log("User Inserted");
-                resolve(result);
-            }
-
-            connection.close();
-        });
-    });
+    return sendRequest(connection, INSERT_USER, [name, email, phoneNumber]);
 }
 
 const getUser = async (id) => {
     let connection = createConnection(mysqlConnectionConfig);
-    console.log(id);
-    return new Promise((resolve, reject) => {
-        connection.query(SELECT_USER, [id, id], (err, result) => {
-            if (err) {
-                console.log("Getting error while searching for user with the email: " + email);
-                reject(err);
-            } else {
-                console.log("User Found");
-                resolve(result);
-            }
-
-            connection.close();
-        });
-    });
+    return sendRequest(connection, SELECT_USER, [id, id]);
 }
 
 const submitAddress = async ({locality, area, pincode, username, phone_number, email, type}) => {
     let connection = createConnection(mysqlConnectionConfig);
-    return new Promise((resolve, reject) => {
-        connection.query(INSERT_ADDRESS, [locality, area, pincode, type, username, phone_number, "", email], (err, result) => {
-            if (err) {
-                console.log("Getting error while inserting address " + err);
-                reject(err);
-            } else {
-                console.log("Insertion successfull");
-                resolve(result);
-            }
-
-            connection.close();
-        });
-    });
+    return sendRequest(connection, INSERT_ADDRESS, [locality, area, pincode, type, username, phone_number, "", email]);
 }
 
-const submitOrder = async ({email, items, totalPrice, date}) => {
+const submitOrder = async (orderData, orderItems) => {
     let connection = createConnection(mysqlConnectionConfig);
     return new Promise((resolve, reject) => {
-        connection.query(INSERT_ORDER, [email, date, totalPrice], (err, result) => {
-            if (err) {
-                console.log("Getting error while inserting order " + err);
-                reject(err);
-            } else {
-                console.log("Insertion successful ", result.insertId);
-                let a  = items.map(item => {
-                    return [result.insertId, item.productId, item.quantity, item.unitPrice];
-                });
-                connection.query(INSERT_ORDER_ITEM, [a], (errA, resultA) => {
-                    if (errA) {
-                        reject(errA);
-                    } else {
-                        resolve({orderId: result.insertId});
-                    }
-                });
-                
-            }
+        sendRequest(connection, INSERT_ORDER, [
+            orderData.phone_number,
+            orderData.order_date,
+            orderData.status,
+            orderData.total_price,
+            orderData.order_create_at,
+            orderData.timeslot,
+            orderData.address
+        ], false).then(result => {
+            console.log(result.insertId);
+            let values = orderItems.map(item => {
+                return [
+                    result.insertId,
+                    item.item.id,
+                    item.quantity,
+                    item.item.unitPrice
+                ]
+            });
 
+            sendRequest(connection, INSERT_ORDER_ITEM, [values], false).then(orderItemResult => {
+                resolve({
+                    insertedOrderId: result.insertId
+                });
+                connection.close();
+            }).catch(err => {
+                reject("Error while inserting the order item");
+                connection.close();
+            });
+            
+        }).catch(err => {
+            reject("Error while inserting the order");
             connection.close();
         });
     });
@@ -284,25 +233,13 @@ const submitOrder = async ({email, items, totalPrice, date}) => {
 
 const ordersList = async (phoneNumber) => {
     let connection = createConnection(mysqlConnectionConfig);
-    return new Promise((resolve, reject) => {
-        connection.query(SELECT_ORDER, [phoneNumber], (err, result) => {
-            if (err) {
-                console.log("Getting error while searching for order with the phoneNumber: " + phoneNumber);
-                reject(err);
-            } else {
-                resolve(result);
-            }
-
-            connection.close();
-        });
-    });
+    return sendRequest(connection, SELECT_ORDER, [phoneNumber]);
 };
 
 module.exports.validateUserLogin = validateUserLogin;
 module.exports.getFruit = getFruit;
 module.exports.searchProduct = searchProduct;
 module.exports.getAddresses = getAddresses;
-module.exports.getAddressById = getAddressById;
 module.exports.insertUser = insertUser;
 module.exports.getUser = getUser;
 module.exports.submitAddress = submitAddress;
