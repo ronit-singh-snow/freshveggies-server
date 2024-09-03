@@ -10,7 +10,7 @@ const SELECT_ADDRESSES = `SELECT * FROM fruitvegetables.address`;
 const INSERT_USER = `INSERT INTO fruitvegetables.user (username, email, phone_number) VALUES (?, ?, ?)`;
 const SELECT_USER = `SELECT * FROM fruitvegetables.user where email = ? or phone_number = ?`;
 const SELECT_ORDER = `SELECT * FROM fruitvegetables.order where phone_number = ?`;
-const INSERT_ADDRESS = 'INSERT INTO fruitvegetables.address (house_flat_no, street_locality, pincode, type, name, phone_number, address_line_2, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?);'
+const INSERT_ADDRESS = 'INSERT INTO fruitvegetables.address (locality, full_address, type, name, phone_number, is_default) VALUES (?, ?, ?, ?, ?, ?);'
 const INSERT_ORDER = 'INSERT INTO fruitvegetables.order (phone_number, order_date, status, total_price, order_create_at, timeslot, address) VALUES (?, ?, ?, ?, ?, ?, ?)';
 const INSERT_ORDER_ITEM = 'INSERT INTO fruitvegetables.order_item (order_id, product_id, quantity, unit_price) VALUES ?';
 
@@ -187,9 +187,50 @@ const getUser = async (id) => {
     return sendRequest(connection, SELECT_USER, [id, id]);
 }
 
-const submitAddress = async ({locality, area, pincode, username, phone_number, email, type}) => {
+const submitAddress = ({full_address, locality, username, phone_number, email, type, isDefaultAddress, isEdit, idaddress}) => {
     let connection = createConnection(mysqlConnectionConfig);
-    return sendRequest(connection, INSERT_ADDRESS, [locality, area, pincode, type, username, phone_number, "", email]);
+    let query = "";
+    let setValues = [];
+    let values = [];
+    if (isEdit) {
+        if (full_address) {
+            setValues.push("full_address = ?");
+            values.push(full_address);
+        }
+        if (locality) {
+            setValues.push("locality = ?");
+            values.push(locality);
+        }
+        if (isDefaultAddress) {
+            setValues.push("is_default = 1");
+        }
+
+        if (values.length > 0) {
+            query = "UPDATE fruitvegetables.address SET " + setValues.join(",") + " WHERE (idaddress=?)"
+            values.push(idaddress);
+        }
+    } else {
+        values = [locality, full_address, type, username, phone_number, isDefaultAddress];
+        query = INSERT_ADDRESS;
+    }
+
+    return new Promise((resolve, reject) => {
+        if (!query)
+            reject("Data is not available");
+        
+        sendRequest(connection, query, values).then(result => {
+            console.log(result);
+            resolve(result);
+        }).catch(err => {
+            reject(err);
+        })
+    });
+}
+
+const deleteRecords = (table, id, columnName) => {
+    let query = "DELETE FROM ?? WHERE (?? = ?)";
+    let connection = createConnection(mysqlConnectionConfig);
+    return sendRequest(connection, query, [table, columnName, parseInt(id)])
 }
 
 const submitOrder = async (orderData, orderItems) => {
@@ -247,3 +288,4 @@ module.exports.submitOrder = submitOrder;
 module.exports.ordersList = ordersList;
 module.exports.filterProductWithQuery = filterProductWithQuery;
 module.exports.getHomepageDetails = getHomepageDetails;
+module.exports.deleteRecords = deleteRecords;

@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { validateUserLogin, getFruit, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList, filterProductWithQuery, getHomepageDetails } = require('./mysqlConnection.js');
+const { validateUserLogin, getFruit, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList, filterProductWithQuery, getHomepageDetails, deleteRecords } = require('./mysqlConnection.js');
 const fs = require('fs');
 var path = require('path');
 const app = express();
@@ -100,6 +100,16 @@ app.post("/submitaddress", (req, res) => {
 	}).catch((err) => {
 		res.send(err);
 	})
+});
+
+app.delete("/delete_resource/:table/:id/:columnname", (req, res) => {
+	if (!req.params.table || !req.params.id)
+		res.send("Table or ID is not correct");
+	else {
+		deleteRecords(req.params.table, req.params.id, req.params.columnname).then(result => {
+			res.send(result);
+		})
+	}
 });
 
 app.post("/submitorder", (req, res) => {
