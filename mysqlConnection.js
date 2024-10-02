@@ -9,10 +9,34 @@ const SEARCH_PRODUCT_BY_NAME = `SELECT * FROM fruitvegetables.product where name
 const SELECT_ADDRESSES = `SELECT * FROM fruitvegetables.address`;
 const INSERT_USER = `INSERT INTO fruitvegetables.user (username, email, phone_number) VALUES (?, ?, ?)`;
 const SELECT_USER = `SELECT * FROM fruitvegetables.user where email = ? or phone_number = ?`;
-const SELECT_ORDER = `SELECT * FROM fruitvegetables.order where phone_number = ?`;
+const SELECT_ORDER = `SELECT * FROM fruitvegetables.order where phone_number = ? order by idorder desc`;
 const INSERT_ADDRESS = 'INSERT INTO fruitvegetables.address (locality, full_address, type, name, phone_number, is_default) VALUES (?, ?, ?, ?, ?, ?);'
 const INSERT_ORDER = 'INSERT INTO fruitvegetables.order (phone_number, order_date, status, total_price, order_create_at, timeslot, address) VALUES (?, ?, ?, ?, ?, ?, ?)';
 const INSERT_ORDER_ITEM = 'INSERT INTO fruitvegetables.order_item (order_id, product_id, quantity, unit_price) VALUES ?';
+const SELECT_ORDER_ITEM_PRODUCT = `SELECT * 
+                                    FROM order_item
+                                    INNER JOIN product where order_item.product_id = product.id AND order_item.order_id = ?;`
+
+const SELECT_ORDER_FILTERED = `select
+                                    idorder,
+                                    status,
+                                    total_price,
+                                    from_unixtime(order_date/1000, '%M %d, %Y %H:%i') as 'order_date',
+                                    from_unixtime(delivered_at/1000, '%M %d, %Y %H:%i') as 'delivered_at',
+                                    timeslot
+                                from fruitvegetables.order
+                                where
+                                    phone_number = ?
+                                    AND
+                                    (
+                                        status = 'placed'
+                                        OR (
+                                            datediff(NOW(), from_unixtime(order_date/1000, '%Y-%m-%d %H:%i:%s')) < 5
+                                            AND
+                                            status = 'delivered'
+                                        )
+                                    )
+                                order by order_date desc;`
 
 const mysqlConnectionConfig = {
     host: process.env.AIVEN_HOST,
@@ -230,7 +254,7 @@ const submitAddress = ({full_address, locality, username, phone_number, email, t
 const deleteRecords = (table, id, columnName) => {
     let query = "DELETE FROM ?? WHERE (?? = ?)";
     let connection = createConnection(mysqlConnectionConfig);
-    return sendRequest(connection, query, [table, columnName, parseInt(id)])
+    return sendRequest(connection, query, [table, columnName, parseInt(id)]);
 }
 
 const submitOrder = async (orderData, orderItems) => {
@@ -274,8 +298,13 @@ const submitOrder = async (orderData, orderItems) => {
 
 const ordersList = async (phoneNumber) => {
     let connection = createConnection(mysqlConnectionConfig);
-    return sendRequest(connection, SELECT_ORDER, [phoneNumber]);
+    return sendRequest(connection, SELECT_ORDER_FILTERED, [phoneNumber]);
 };
+
+const getOrderItems = async (orderId) => {
+    let connection = createConnection(mysqlConnectionConfig);
+    return sendRequest(connection, SELECT_ORDER_ITEM_PRODUCT, [(orderId)])
+}
 
 module.exports.validateUserLogin = validateUserLogin;
 module.exports.getFruit = getFruit;
@@ -289,3 +318,4 @@ module.exports.ordersList = ordersList;
 module.exports.filterProductWithQuery = filterProductWithQuery;
 module.exports.getHomepageDetails = getHomepageDetails;
 module.exports.deleteRecords = deleteRecords;
+module.exports.getOrderItems = getOrderItems;

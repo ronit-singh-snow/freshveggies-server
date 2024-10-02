@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { validateUserLogin, getFruit, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList, filterProductWithQuery, getHomepageDetails, deleteRecords } = require('./mysqlConnection.js');
+const { validateUserLogin, getFruit, searchProduct, getAddresses, insertUser, getUser, submitAddress, submitOrder, ordersList, filterProductWithQuery, getHomepageDetails, deleteRecords, getOrderItems } = require('./mysqlConnection.js');
 const fs = require('fs');
 var path = require('path');
 const app = express();
@@ -127,6 +127,23 @@ app.get("/listorders", (req, res) => {
 		res.json({
 			"errorMessage": "Did not find any order associated to the phone number"
 		});
+	})
+});
+
+app.get("/order_items", (req, res) => {
+	getOrderItems(req.query.order_id).then(result => {
+		res.json(result)
+	}).catch(() => {
+		res.json({
+			"errorMessage": "Did not find any order item"
+		})
+	})
+});
+
+app.get("/onload_data", (req, res) => {
+	res.json({
+		DELIVERY_FEE: 10,
+		PLATFORM_FEE: 3
 	})
 });
 
