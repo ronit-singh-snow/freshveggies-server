@@ -5,7 +5,6 @@ const fs = require('fs');
 var path = require('path');
 const app = express();
 const PORT = 3000;
-const FSQ_API_KEY = "fsq3BSXxU5+jqWj6Ygx9DrTNXs0rfhS9CqleCTZ4unHmm8o=";
 
 
 app.use(express.urlencoded({ extended: false }));
@@ -84,6 +83,7 @@ app.get("/insertuser", (req, res) => {
 });
 
 app.get("/finduser", (req, res) => {
+	console.log("FindUsers: " + req.query.id);
 	getUser(req.query.id).then(result => {
 		res.json(result);
 	}).catch(() => {
