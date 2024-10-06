@@ -26,15 +26,6 @@ app.get("/banner_images", (req, res) => {
 	})
 })
 
-app.post("/validate_login", async (req, res) => {
-	const x = await validateUserLogin(req.body.userId, req.body.password);
-	console.log(x);
-	if (x)
-		return res.send(true);
-	else
-		return res.send(false);
-});
-
 app.get("/fruit/:id", (req, res) => {
 	getFruit(req.params["id"]).then((result) => {
 		res.json(result);
@@ -146,6 +137,11 @@ app.get("/onload_data", (req, res) => {
 		PLATFORM_FEE: 3
 	})
 });
+
+app.get("/delete_user", (req, res) => {
+	const html = fs.readFileSync("./DeleteUser.html");
+	res.end(html);
+})
 
 app.listen(process.env.port || PORT, function (err) {
 	if (err) console.log(err);

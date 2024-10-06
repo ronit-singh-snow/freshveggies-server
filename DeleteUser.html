@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Orange Cart</title>
+    </head>
+    <body>
+        <div>Are you sure you want to delete the user? If yes then please provide associated phone number of the user an submit</div>
+        <input type="tel" name="phone_number"/>
+        <button onclick="deleteUser()">Submit</button>
+
+        <script>
+            let deleteUser = (phoneNumber) => {
+                console.log("Provided phone number is " + phoneNumber);
+            }
+        </script>
+    </body>
+</html>
